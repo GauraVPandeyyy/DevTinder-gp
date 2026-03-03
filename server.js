@@ -5,22 +5,37 @@ const app = express();
 const ConnectDB = require("./config/db");
 // const mongoSanitize = require("express-mongo-sanitize");
 const { signupValidation } = require("./validators/userValidator");
+const {loginValidation} = require('./validators/loginValidation')
 const { validationResult } = require("express-validator");
+const bcrypt = require("bcrypt");
 // app.use(mongoSanitize());
 dotenv.config();
 app.use(express.json());
 ConnectDB();
 
-app.post("/api/signup",signupValidation, async (req, res) => {
-  const response = req.body;
+app.post("/api/signup", signupValidation, async (req, res) => {
+  const {
+    firstName,
+    lastName,
+    email,
+    password,
+    age,
+    photoUrl,
+    skills,
+    gender,
+    about,
+  } = req.body;
 
   const errors = validationResult(req);
 
-  if(!errors.isEmpty()){
+  if (!errors.isEmpty()) {
     return res.status(400).json({
-      errors : errors.array()
-    })
+      errors: errors.array(),
+    });
   }
+
+  const hashPassword = await bcrypt.hash(password, 10);
+  console.log(hashPassword);
 
   try {
     //  if(response?.skills?.length >10){
@@ -35,8 +50,18 @@ app.post("/api/signup",signupValidation, async (req, res) => {
     //   throw new Error("About length can't be more than 100");
     // }
 
-    const data = await User.create(response);
-    console.log(response);
+    const data = await User.create({
+      firstName,
+      lastName,
+      email,
+      password: hashPassword,
+      age,
+      photoUrl,
+      skills,
+      gender,
+      about,
+    });
+
     return res.status(201).json({
       user: data,
       message: "New User Created",
@@ -45,6 +70,39 @@ app.post("/api/signup",signupValidation, async (req, res) => {
     res.status(400).json({
       success: false,
       message: error.message,
+    });
+  }
+});
+
+app.post("/api/login",loginValidation, async (req, res) => {
+  const errors = validationResult(req);
+  if(!errors.isEmpty()){
+    return res.status(400).json({
+      success:false,
+      errors : errors.array()
+    })
+  }
+
+
+  try {
+    const { email, password } = req.body;
+    console.log(email, password);
+    const user = await User.findOne({ email });
+    if (!user) {
+      throw new Error("Invalid email or password");
+    }
+    const match = await bcrypt.compare(password, user.password);
+    if (!match) {
+      throw new Error("Invalid email or password");
+    }
+
+    return res.status(200).json({
+      message: "User Login Successfully!",
+    });
+  } catch (error) {
+    res.status(400).json({
+      success: false,
+      message: `failed- ${error.message}`,
     });
   }
 });

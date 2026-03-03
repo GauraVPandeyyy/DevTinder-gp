@@ -1,5 +1,5 @@
 const mongoose = require("mongoose");
-
+const validator = require("validator")
 const userSchema = mongoose.Schema(
   {
     firstName: {
@@ -17,12 +17,22 @@ const userSchema = mongoose.Schema(
       lowercase: true,
       unique: true,
       trim: true,
-      match: /.+\@.+\..+/,
+      // match: /.+\@.+\..+/,
+      validate(v){
+        if(!validator.isEmail(v)){
+          throw new Error("Invalid email value - " + v)
+        }
+      }
     },
     password: {
       type: String,
       required: true,
-      minlength: 6,
+      validate:{
+        validator: function(value){
+          return validator.isStrongPassword(value)
+        },
+        message: `Weak password`,
+      }
     },
     age: {
       type: Number,
@@ -33,7 +43,7 @@ const userSchema = mongoose.Schema(
       type: String,
       validate(value) {
         if (!["male", "female", "others"].includes(value)) {
-          throw new Error("Gender Data is not valid!");
+          throw new Error("Gender Data is not valid! eg:(male , female , others");
         }
       },
     },
@@ -50,20 +60,11 @@ const userSchema = mongoose.Schema(
       type: [String],
       validate: {
         validator: function (v) {
-          return v.lenth < 10;
+          return v.length <= 10;
         },
-        message: "Skills length should be lesser than 10",
+        message: "Skills cannot exceed 10",
       },
     },
-    // skills: {
-    //   type: [String],
-    //   validate: {
-    //     validator: function (v) {
-    //       return v.length <= 10;
-    //     },
-    //     message: "Skills cannot exceed 10",
-    //   },
-    // },
   },
   {
     timestamps: true,

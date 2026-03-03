@@ -3,12 +3,25 @@ const dotenv = require("dotenv");
 const User = require("./models/userModel");
 const app = express();
 const ConnectDB = require("./config/db");
+// const mongoSanitize = require("express-mongo-sanitize");
+const { signupValidation } = require("./validators/userValidator");
+const { validationResult } = require("express-validator");
+// app.use(mongoSanitize());
 dotenv.config();
 app.use(express.json());
 ConnectDB();
 
-app.post("/api/signup", async (req, res) => {
+app.post("/api/signup",signupValidation, async (req, res) => {
   const response = req.body;
+
+  const errors = validationResult(req);
+
+  if(!errors.isEmpty()){
+    return res.status(400).json({
+      errors : errors.array()
+    })
+  }
+
   try {
     //  if(response?.skills?.length >10){
     //   throw new Error("Skills length can't be more than 10");

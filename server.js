@@ -7,9 +7,11 @@ const ConnectDB = require("./config/db");
 const { signupValidation } = require("./validators/userValidator");
 const { loginValidation } = require("./validators/loginValidation");
 const { validationResult } = require("express-validator");
+
 const bcrypt = require("bcrypt");
 const cookiesParser = require("cookie-parser");
 const jwt = require("jsonwebtoken");
+const userAuth = require("./middleware/userAuth");
 
 // app.use(mongoSanitize());
 dotenv.config();
@@ -99,10 +101,14 @@ app.post("/api/login", loginValidation, async (req, res) => {
       throw new Error("Invalid email or password");
     }
 
-    const token = await jwt.sign({ id: user._id }, "DevTinder@123");
+    const token = await jwt.sign({ id: user._id }, "DevTinder@123", {
+      expiresIn: "1h",
+    });
 
-    res.cookie("token", token);
-    console.log(token);
+    res.cookie("token", token, {
+      expires: new Date(Date.now() + 8 * 3600000), // cookie will be removed after 8 hours
+    });
+
     return res.status(200).json({
       message: "User Login Successfully!",
     });
@@ -114,21 +120,9 @@ app.post("/api/login", loginValidation, async (req, res) => {
   }
 });
 
-app.get("/api/profile", async (req, res) => {
+app.get("/api/profile", userAuth, async (req, res) => {
   try {
-    const token = req.cookies.token;
-    if (!token) {
-      throw new Error("Invalid Token");
-    }
-    console.log("profile - ", token)
-    const cookieData = await jwt.verify(token, "DevTinder@123");
-    const { id } = cookieData;
-    console.log(token);
-    const user = await User.findById(id).select("-password");
-    if (!user) {
-      throw new Error("Invalid User");
-    }
-
+    const user = req.user;
     res.status(200).json({
       user: user,
       message: "Profile fetched successfully",
@@ -138,82 +132,6 @@ app.get("/api/profile", async (req, res) => {
       success: false,
       message: `failed- ${error.message}`,
     });
-  }
-});
-
-app.get("/api/user/:id", async (req, res) => {
-  const id = req.params.id;
-  try {
-    // const email = req.body.email;
-    // const user = await User.findOne({ email: email });
-    const user = await User.findById(id).select("-password");
-    if (!user) {
-      res.status(400).json({ message: "User not found!" });
-    } else {
-      res.send(user);
-    }
-  } catch (error) {
-    res.send("something went wrong");
-  }
-});
-
-app.get("/api/feed", async (req, res) => {
-  try {
-    const users = await User.find({}).select("-password");
-    if (users.length === 0) {
-      res.send("No user found");
-    } else {
-      res.send(users);
-    }
-  } catch (error) {
-    res.send("something went wrong - " + error.message);
-  }
-});
-
-app.patch("/api/user/:id", async (req, res) => {
-  const data = req.body;
-  try {
-    if (Object.keys(data).length === 0)
-      throw new Error("Nothing provided to update");
-
-    const isAllowedData = ["age", "gender", "photoUrl", "about", "skills"];
-    const isAllowed = Object.keys(data).every((k) => isAllowedData.includes(k));
-    if (!isAllowed) {
-      throw new Error("Can't update");
-    }
-
-    // if (data?.skills?.length > 10) {
-    //   throw new Error("Skills length can't be more than 10");
-    // }
-    // if (data?.age > 100) {
-    //   throw new Error("Age can't be more than 100");
-    // }
-    // if (data?.about?.length > 500) {
-    //   throw new Error("About length can't be more than 100");
-    // }
-
-    const user = await User.findByIdAndUpdate(req.params.id, data, {
-      returnDocument: "after",
-      runValidators: true,
-    });
-    console.log(user);
-    res.status(200).json("Updated successfully!");
-  } catch (error) {
-    res.status(400).json("Update Failded - " + error.message);
-  }
-});
-
-app.delete("/api/user/:id", async (req, res) => {
-  const data = req.body;
-  try {
-    if (!user) {
-      return res.status(404).json({ message: "User not found" });
-    }
-    const user = await User.findByIdAndDelete(req.params.id);
-    console.log(user);
-    res.status(200).json("Delete successfully!");
-  } catch (error) {
-    res.status(400).json("Something went wrong!! - " + error.message);
   }
 });
 

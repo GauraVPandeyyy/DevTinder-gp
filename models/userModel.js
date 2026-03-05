@@ -1,5 +1,8 @@
 const mongoose = require("mongoose");
-const validator = require("validator")
+const validator = require("validator");
+const bcrypt = require("bcrypt")
+const jwt = require("jsonwebtoken")
+
 const userSchema = mongoose.Schema(
   {
     firstName: {
@@ -18,21 +21,21 @@ const userSchema = mongoose.Schema(
       unique: true,
       trim: true,
       // match: /.+\@.+\..+/,
-      validate(v){
-        if(!validator.isEmail(v)){
-          throw new Error("Invalid email value - " + v)
+      validate(v) {
+        if (!validator.isEmail(v)) {
+          throw new Error("Invalid email value - " + v);
         }
-      }
+      },
     },
     password: {
       type: String,
       required: true,
-      validate:{
-        validator: function(value){
-          return validator.isStrongPassword(value)
+      validate: {
+        validator: function (value) {
+          return validator.isStrongPassword(value);
         },
         message: `Weak password`,
-      }
+      },
     },
     age: {
       type: Number,
@@ -43,7 +46,9 @@ const userSchema = mongoose.Schema(
       type: String,
       validate(value) {
         if (!["male", "female", "others"].includes(value)) {
-          throw new Error("Gender Data is not valid! eg:(male , female , others");
+          throw new Error(
+            "Gender Data is not valid! eg:(male , female , others",
+          );
         }
       },
     },
@@ -70,5 +75,22 @@ const userSchema = mongoose.Schema(
     timestamps: true,
   },
 );
+
+userSchema.methods.comparePasword = async function (passwordInputByUser) {
+  const user = this;
+  const passwordHash = user.password;
+  const isMatch = await bcrypt.compare(passwordInputByUser, passwordHash);
+  return isMatch;
+};
+
+userSchema.methods.getJWT = async function () {
+  const user = this;
+  const token = await jwt.sign({ id: user._id }, "DevTinder@123", {
+    expiresIn: "1h",
+  });
+
+  return token
+};
+
 const User = mongoose.model("User", userSchema);
 module.exports = User;

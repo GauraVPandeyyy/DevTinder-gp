@@ -41,20 +41,8 @@ app.post("/api/signup", signupValidation, async (req, res) => {
   }
 
   const hashPassword = await bcrypt.hash(password, 10);
-  console.log(hashPassword);
 
   try {
-    //  if(response?.skills?.length >10){
-    //   throw new Error("Skills length can't be more than 10");
-
-    // }
-    // if(response?.age >100){
-    //   throw new Error("Age can't be more than 100");
-
-    // }
-    // if(response?.about?.length >500){
-    //   throw new Error("About length can't be more than 100");
-    // }
 
     const data = await User.create({
       firstName,
@@ -91,19 +79,16 @@ app.post("/api/login", loginValidation, async (req, res) => {
 
   try {
     const { email, password } = req.body;
-    console.log(email, password);
     const user = await User.findOne({ email });
     if (!user) {
       throw new Error("Invalid email or password");
     }
-    const match = await bcrypt.compare(password, user.password);
-    if (!match) {
+    const isMatch = await user.comparePasword(password);
+    if (!isMatch) {
       throw new Error("Invalid email or password");
     }
 
-    const token = await jwt.sign({ id: user._id }, "DevTinder@123", {
-      expiresIn: "1h",
-    });
+    const token = await user.getJWT()
 
     res.cookie("token", token, {
       expires: new Date(Date.now() + 8 * 3600000), // cookie will be removed after 8 hours

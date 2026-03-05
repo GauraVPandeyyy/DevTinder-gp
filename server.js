@@ -5,13 +5,17 @@ const app = express();
 const ConnectDB = require("./config/db");
 // const mongoSanitize = require("express-mongo-sanitize");
 const { signupValidation } = require("./validators/userValidator");
-const {loginValidation} = require('./validators/loginValidation')
+const { loginValidation } = require("./validators/loginValidation");
 const { validationResult } = require("express-validator");
 const bcrypt = require("bcrypt");
+const cookiesParser = require("cookie-parser");
+const jwt = require("jsonwebtoken");
+
 // app.use(mongoSanitize());
 dotenv.config();
-app.use(express.json());
 ConnectDB();
+app.use(express.json());
+app.use(cookiesParser());
 
 app.post("/api/signup", signupValidation, async (req, res) => {
   const {
@@ -74,15 +78,14 @@ app.post("/api/signup", signupValidation, async (req, res) => {
   }
 });
 
-app.post("/api/login",loginValidation, async (req, res) => {
+app.post("/api/login", loginValidation, async (req, res) => {
   const errors = validationResult(req);
-  if(!errors.isEmpty()){
+  if (!errors.isEmpty()) {
     return res.status(400).json({
-      success:false,
-      errors : errors.array()
-    })
+      success: false,
+      errors: errors.array(),
+    });
   }
-
 
   try {
     const { email, password } = req.body;
@@ -96,8 +99,39 @@ app.post("/api/login",loginValidation, async (req, res) => {
       throw new Error("Invalid email or password");
     }
 
+    const token = await jwt.sign({ id: user._id }, "DevTinder@123");
+
+    res.cookie("token", token);
+    console.log(token);
     return res.status(200).json({
       message: "User Login Successfully!",
+    });
+  } catch (error) {
+    res.status(400).json({
+      success: false,
+      message: `failed- ${error.message}`,
+    });
+  }
+});
+
+app.get("/api/profile", async (req, res) => {
+  try {
+    const token = req.cookies.token;
+    if (!token) {
+      throw new Error("Invalid Token");
+    }
+    console.log("profile - ", token)
+    const cookieData = await jwt.verify(token, "DevTinder@123");
+    const { id } = cookieData;
+    console.log(token);
+    const user = await User.findById(id).select("-password");
+    if (!user) {
+      throw new Error("Invalid User");
+    }
+
+    res.status(200).json({
+      user: user,
+      message: "Profile fetched successfully",
     });
   } catch (error) {
     res.status(400).json({
@@ -168,6 +202,7 @@ app.patch("/api/user/:id", async (req, res) => {
     res.status(400).json("Update Failded - " + error.message);
   }
 });
+
 app.delete("/api/user/:id", async (req, res) => {
   const data = req.body;
   try {

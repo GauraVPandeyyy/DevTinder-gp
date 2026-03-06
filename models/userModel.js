@@ -47,7 +47,7 @@ const userSchema = mongoose.Schema(
       validate(value) {
         if (!["male", "female", "others"].includes(value)) {
           throw new Error(
-            "Gender Data is not valid! eg:(male , female , others",
+            "Gender Data is not valid! eg:(male , female , others)",
           );
         }
       },
@@ -65,7 +65,7 @@ const userSchema = mongoose.Schema(
       type: [String],
       validate: {
         validator: function (v) {
-          return v.length <= 10;
+          return v.length>0 && v.length <= 10;
         },
         message: "Skills cannot exceed 10",
       },
@@ -76,7 +76,7 @@ const userSchema = mongoose.Schema(
   },
 );
 
-userSchema.methods.comparePasword = async function (passwordInputByUser) {
+userSchema.methods.comparePassword = async function (passwordInputByUser) {
   const user = this;
   const passwordHash = user.password;
   const isMatch = await bcrypt.compare(passwordInputByUser, passwordHash);

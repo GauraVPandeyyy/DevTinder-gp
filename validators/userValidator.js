@@ -16,7 +16,7 @@ exports.signupValidation = [
     .isInt({ min: 18, max: 100 })
     .withMessage("age must be betweeb 18-100"),
 
-  body("photoUrl").isURL().withMessage("Url is not valid"),
+  body("photoUrl").optional().isURL().withMessage("Url is not valid"),
 ];
 
 exports.profileUpdateValidation = [

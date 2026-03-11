@@ -7,7 +7,7 @@ const mongoose = require("mongoose");
 const connectionReqRoute = express.Router();
 
 connectionReqRoute.post(
-  "/request/:status/:toUserId",
+  "/request/send/:status/:toUserId",
   userAuth,
   async (req, res) => {
     const toUserId = req.params.toUserId;
@@ -60,6 +60,51 @@ connectionReqRoute.post(
             : `${req.user.firstName} is Ignored ${toUser.firstName}`,
         data,
       });
+    } catch (error) {
+      return res.status(400).json({
+        success: false,
+        message: error.message,
+      });
+    }
+  },
+);
+
+connectionReqRoute.post(
+  "/request/review/:status/:requestId",
+  userAuth,
+  async (req, res) => {
+    try {
+      const { status, requestId } = req.params;
+      const loggedInUser = req.user;
+
+      const allowedStatus = ["accepted", "rejected"];
+      if (!allowedStatus.includes(status)) {
+        throw new Error("Invalid Status");
+      }
+
+      if (!mongoose.Types.ObjectId.isValid(requestId)) {
+        throw new Error("Invalid RequestID");
+      }
+
+      const requestData = await ConnectionRequest.findOne({
+        _id: requestId,
+        toUserId: loggedInUser._id,
+        status: "interested",
+      });
+
+      if (!requestData) {
+        throw new Error("User Not Found!");
+      }
+
+      requestData.status = status;
+      const data = await requestData.save();
+
+      return res.status(200).json({
+        message: `${loggedInUser.firstName} ${status} the request`,
+        data,
+      });
+      // validate - status(accept, reject) , requestId
+      // find- requestId, toUserId, status
     } catch (error) {
       return res.status(400).json({
         success: false,

@@ -56,7 +56,7 @@ profileRouter.patch(
       if (!isAllowed) {
         throw new Error("Invalid field Entered");
       }
-      Object.assign(loggedInUser, updateUserData)
+      Object.assign(loggedInUser, updateUserData);
 
       await loggedInUser.save();
 
